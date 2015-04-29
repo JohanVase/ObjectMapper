@@ -13,37 +13,68 @@
 */
 
 infix operator <- {}
+infix operator <-! {}
 
 // MARK:- Objects with Basic types
 /**
 * Object of Basic type
 */
 
+public func <-! <T>(inout left: T, right: Map) {
+	mapProperty(&left, right, checkMapping: true)
+}
+
 public func <- <T>(inout left: T, right: Map) {
-    if right.mappingType == MappingType.FromJSON {
-        FromJSON.basicType(&left, object: right.value())
-    } else {
-        ToJSON.basicType(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
-    }
+	mapProperty(&left, right)
+}
+
+private func mapProperty<T>(inout left: T, right: Map, checkMapping: Bool = false) {
+	if right.mappingType == MappingType.FromJSON {
+		if FromJSON.basicType(&left, object: right.value()) == nil && checkMapping {
+			right.markFail()
+		}
+	} else {
+		ToJSON.basicType(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
+	}
 }
 
 /**
 * Optional object of basic type
 */
 public func <- <T>(inout left: T?, right: Map) {
-    if right.mappingType == MappingType.FromJSON {
-        FromJSON.optionalBasicType(&left, object: right.value())
-    } else {
-        ToJSON.optionalBasicType(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
-    }
+	mapProperty(&left, right)
+}
+
+public func <-! <T>(inout left: T?, right: Map) {
+	mapProperty(&left, right, checkMapping: true)
+}
+
+private func mapProperty<T>(inout left: T?, right:Map, checkMapping: Bool = false) {
+	if right.mappingType == MappingType.FromJSON {
+		if FromJSON.optionalBasicType(&left, object: right.value()) == nil && checkMapping {
+			right.markFail()
+		}
+	} else {
+		ToJSON.optionalBasicType(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
+	}
 }
 
 /**
 * Implicitly unwrapped optional object of basic type
 */
 public func <- <T>(inout left: T!, right: Map) {
+	mapProperty(&left, right)
+}
+
+public func <-! <T>(inout left: T!, right: Map) {
+	mapProperty(&left, right, checkMapping: true)
+}
+
+private func mapProperty<T>(inout left: T!, right: Map, checkMapping: Bool = false) {
 	if right.mappingType == MappingType.FromJSON {
-		FromJSON.optionalBasicType(&left, object: right.value())
+		if FromJSON.optionalBasicType(&left, object: right.value()) == nil && checkMapping {
+			right.markFail()
+		}
 	} else {
 		ToJSON.optionalBasicType(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
 	}
@@ -52,10 +83,18 @@ public func <- <T>(inout left: T!, right: Map) {
 /**
 * Object of Basic type with Transform
 */
+public func <-! <T, Transform: TransformType where Transform.Object == T>(inout left: T, right: (Map, Transform)) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T, Transform: TransformType where Transform.Object == T>(inout left: T, right: (Map, Transform)) {
+    mapProperty(&left, right)
+}
+public func mapProperty<T, Transform: TransformType where Transform.Object == T>(inout left: T, right: (Map, Transform), checkMapping:Bool = false) {
     if right.0.mappingType == MappingType.FromJSON {
         var value: T? = right.1.transformFromJSON(right.0.currentValue)
-        FromJSON.basicType(&left, object: value)
+        if FromJSON.basicType(&left, object: value) == nil && checkMapping {
+            right.0.markFail()
+        }
     } else {
         var value: Transform.JSON? = right.1.transformToJSON(left)
         ToJSON.optionalBasicType(value, key: right.0.currentKey!, dictionary: &right.0.JSONDictionary)
@@ -65,10 +104,18 @@ public func <- <T, Transform: TransformType where Transform.Object == T>(inout l
 /**
 * Optional object of basic type with Transform
 */
+public func <-! <T, Transform: TransformType where Transform.Object == T>(inout left: T?, right: (Map, Transform)) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T, Transform: TransformType where Transform.Object == T>(inout left: T?, right: (Map, Transform)) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T, Transform: TransformType where Transform.Object == T>(inout left: T?, right: (Map, Transform), checkMapping:Bool = false) {
     if right.0.mappingType == MappingType.FromJSON {
         var value: T? = right.1.transformFromJSON(right.0.currentValue)
-        FromJSON.optionalBasicType(&left, object: value)
+        if FromJSON.optionalBasicType(&left, object: value) == nil && checkMapping {
+            right.0.markFail()
+        }
     } else {
         var value: Transform.JSON? = right.1.transformToJSON(left)
         ToJSON.optionalBasicType(value, key: right.0.currentKey!, dictionary: &right.0.JSONDictionary)
@@ -78,10 +125,18 @@ public func <- <T, Transform: TransformType where Transform.Object == T>(inout l
 /**
 * Implicitly unwrapped optional object of basic type with Transform
 */
+public func <-! <T, Transform: TransformType where Transform.Object == T>(inout left: T!, right: (Map, Transform)) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T, Transform: TransformType where Transform.Object == T>(inout left: T!, right: (Map, Transform)) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T, Transform: TransformType where Transform.Object == T>(inout left: T!, right: (Map, Transform), checkMapping:Bool = false) {
 	if right.0.mappingType == MappingType.FromJSON {
 		var value: T? = right.1.transformFromJSON(right.0.currentValue)
-		FromJSON.optionalBasicType(&left, object: value)
+        if FromJSON.optionalBasicType(&left, object: value) == nil && checkMapping {
+            right.0.markFail()
+        }
 	} else {
 		var value: Transform.JSON? = right.1.transformToJSON(left)
 		ToJSON.optionalBasicType(value, key: right.0.currentKey!, dictionary: &right.0.JSONDictionary)
@@ -92,9 +147,17 @@ public func <- <T, Transform: TransformType where Transform.Object == T>(inout l
 /**
 * Object conforming to Mappable
 */
+public func <-! <T: Mappable>(inout left: T, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: T, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: T, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.object(&left, object: right.currentValue)
+        if FromJSON.object(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
     } else {
         ToJSON.object(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -103,9 +166,17 @@ public func <- <T: Mappable>(inout left: T, right: Map) {
 /**
 * Optional Mappable objects
 */
+public func <-! <T: Mappable>(inout left: T?, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: T?, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: T?, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.optionalObject(&left, object: right.currentValue)
+        if FromJSON.optionalObject(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
     } else {
         ToJSON.optionalObject(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -114,9 +185,17 @@ public func <- <T: Mappable>(inout left: T?, right: Map) {
 /**
 * Implicitly unwrapped optional Mappable objects
 */
+public func <-! <T: Mappable>(inout left: T!, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: T!, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: T!, right: Map, checkMapping:Bool = false) {
 	if right.mappingType == MappingType.FromJSON {
-		FromJSON.optionalObject(&left, object: right.currentValue)
+        if FromJSON.optionalObject(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
 	} else {
 		ToJSON.optionalObject(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
 	}
@@ -126,9 +205,17 @@ public func <- <T: Mappable>(inout left: T!, right: Map) {
 /**
 * Dictionary of Mappable objects <String, T: Mappable>
 */
+public func <-! <T: Mappable>(inout left: Dictionary<String, T>, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Dictionary<String, T>, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Dictionary<String, T>, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.objectDictionary(&left, object: right.currentValue)
+        if FromJSON.objectDictionary(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
     } else {
         ToJSON.objectDictionary(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -137,9 +224,17 @@ public func <- <T: Mappable>(inout left: Dictionary<String, T>, right: Map) {
 /**
 * Optional Dictionary of Mappable object <String, T: Mappable>
 */
+public func <-! <T: Mappable>(inout left: Dictionary<String, T>?, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Dictionary<String, T>?, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Dictionary<String, T>?, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.optionalObjectDictionary(&left, object: right.currentValue)
+        if FromJSON.optionalObjectDictionary(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
     } else {
         ToJSON.optionalObjectDictionary(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -148,9 +243,17 @@ public func <- <T: Mappable>(inout left: Dictionary<String, T>?, right: Map) {
 /**
 * Implicitly unwrapped Optional Dictionary of Mappable object <String, T: Mappable>
 */
+public func <-! <T: Mappable>(inout left: Dictionary<String, T>!, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Dictionary<String, T>!, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Dictionary<String, T>!, right: Map, checkMapping:Bool = false) {
 	if right.mappingType == MappingType.FromJSON {
-		FromJSON.optionalObjectDictionary(&left, object: right.currentValue)
+        if FromJSON.optionalObjectDictionary(&left, object: right.currentValue) == nil && checkMapping {
+            right.markFail()
+        }
 	} else {
 		ToJSON.optionalObjectDictionary(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
 	}
@@ -160,9 +263,18 @@ public func <- <T: Mappable>(inout left: Dictionary<String, T>!, right: Map) {
 /**
 * Array of Mappable objects
 */
+public func <-! <T: Mappable>(inout left: Array<T>, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Array<T>, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Array<T>, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.objectArray(&left, object: right.currentValue)
+        let mappingResult = FromJSON.objectArray(&left, object: right.currentValue, checkMapping: checkMapping)
+        if mappingResult.failed && checkMapping {
+            right.markFail(previousMappingErrors:mappingResult.error)
+        }
     } else {
         ToJSON.objectArray(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -171,9 +283,18 @@ public func <- <T: Mappable>(inout left: Array<T>, right: Map) {
 /**
 * Optional array of Mappable objects
 */
+public func <-! <T: Mappable>(inout left: Array<T>?, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Array<T>?, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Array<T>?, right: Map, checkMapping:Bool = false) {
     if right.mappingType == MappingType.FromJSON {
-        FromJSON.optionalObjectArray(&left, object: right.currentValue)
+        let mappingResult = FromJSON.optionalObjectArray(&left, object: right.currentValue, checkMapping: checkMapping)
+        if mappingResult.failed && checkMapping {
+            right.markFail(previousMappingErrors:mappingResult.error)
+        }
     } else {
         ToJSON.optionalObjectArray(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
     }
@@ -182,9 +303,18 @@ public func <- <T: Mappable>(inout left: Array<T>?, right: Map) {
 /**
 * Implicitly unwrapped Optional array of Mappable objects
 */
+public func <-! <T: Mappable>(inout left: Array<T>!, right: Map) {
+    mapProperty(&left, right, checkMapping: true)
+}
 public func <- <T: Mappable>(inout left: Array<T>!, right: Map) {
+    mapProperty(&left, right)
+}
+public func mapProperty <T: Mappable>(inout left: Array<T>!, right: Map, checkMapping:Bool = false) {
 	if right.mappingType == MappingType.FromJSON {
-		FromJSON.optionalObjectArray(&left, object: right.currentValue)
+        let mappingResult = FromJSON.optionalObjectArray(&left, object: right.currentValue, checkMapping: checkMapping)
+        if mappingResult.failed && checkMapping {
+            right.markFail(previousMappingErrors:mappingResult.error)
+        }
 	} else {
 		ToJSON.optionalObjectArray(left, key: right.currentKey!, dictionary: &right.JSONDictionary)
 	}

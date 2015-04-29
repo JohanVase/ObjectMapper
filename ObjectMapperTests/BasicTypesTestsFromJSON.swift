@@ -27,6 +27,40 @@ class BasicTypesTestsFromJSON: XCTestCase {
 	
 	// MARK: Test mapping to JSON and back (basic types: Bool, Int, Double, Float, String)
 	
+	func testMappingMissingBoolFromJSON() {
+		class CheckedTypes : Mappable {
+			var bool : Bool = false
+			var boolOptional: Bool?
+			var boolImplicityUnwrapped: Bool!
+			var int: Int = 0
+			var intOptional: Int?
+			var intImplicityUnwrapped: Int!
+			required init?(_ map: Map) {
+				mapping(map)
+			}
+			func mapping(map: Map) {
+				bool								<-! map["bool"]
+				boolOptional						<-! map["boolOpt"]
+				boolImplicityUnwrapped				<-! map["boolImp"]
+				int									<-! map["int"]
+				intOptional							<-! map["intOpt"]
+				intImplicityUnwrapped				<-! map["intImp"]
+			}
+		}
+		let mapper = Mapper<CheckedTypes>()
+		var mappedObject = mapper.failableMap("{}")
+		expect(mappedObject.value).to(beNil())
+		expect(mappedObject.error).notTo(beNil())
+		let errors = mappedObject.error
+		expect(errors?.count).to(equal(6))
+		expect(errors).to(contain("bool"))
+		expect(errors).to(contain("boolOpt"))
+		expect(errors).to(contain("boolImp"))
+		expect(errors).to(contain("int"))
+		expect(errors).to(contain("intOpt"))
+		expect(errors).to(contain("intImp"))
+	}
+	
 	func testMappingBoolFromJSON(){
 		var value: Bool = true
 		let JSONString = "{\"bool\" : \(value), \"boolOpt\" : \(value), \"boolImp\" : \(value)}"

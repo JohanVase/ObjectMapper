@@ -30,6 +30,7 @@ public final class Map {
 
 	/// Counter for failing cases of deserializing values to `let` properties.
 	private var failedCount: Int = 0
+	var unmapped : [String] = []
 
 	private init(mappingType: MappingType, JSONDictionary: [String : AnyObject]) {
 		self.mappingType = mappingType
@@ -67,18 +68,29 @@ public final class Map {
 			return value
 		} else {
 			// Collects failed count
-			failedCount++
-
+			self.markFail()
+			
 			// Returns dummy memory as a proxy for type `T`
 			let pointer = UnsafeMutablePointer<T>.alloc(0)
 			pointer.dealloc(0)
 			return pointer.memory
 		}
 	}
+	
+	func markFail(previousMappingErrors:[String]? = nil) {
+		failedCount++
+		if let currentKey = currentKey {
+            if let previousMappingErrors = previousMappingErrors {
+                unmapped += previousMappingErrors.map{"\(currentKey).\($0)"}
+            } else {
+                unmapped.append(currentKey)
+            }
+		}
+	}
 
 	/// Returns whether the receiver is success or failure.
 	public var isValid: Bool {
-		return failedCount == 0
+		return failedCount == 0 && unmapped.count == 0
 	}
 }
 
@@ -162,6 +174,13 @@ public final class Mapper<N: Mappable> {
 		return nil
 	}
 
+	public func failableMap(JSONString: String) -> FailableOf<N> {
+		if let JSON = parseJSONDictionary(JSONString) {
+			return failableMap(JSON)
+		}
+		return FailableOf(["JSON parsing failed"])
+	}
+
 	/**
 	* Maps a JSON object to a Mappable object if it is a JSON dictionary, or returns nil.
 	*/
@@ -180,6 +199,16 @@ public final class Mapper<N: Mappable> {
 		let map = Map(mappingType: .FromJSON, JSONDictionary: JSONDictionary)
 		let object = N(map)
 		return object
+	}
+
+	public func failableMap(JSONDictionary: [String : AnyObject]) -> FailableOf<N> {
+		let map = Map(mappingType: .FromJSON, JSONDictionary: JSONDictionary)
+		if let object = N(map) {
+			if map.isValid {
+				return FailableOf(object)
+			}
+		}
+		return FailableOf(map.unmapped)
 	}
 
 	//MARK: Mapping functions for Arrays and Dictionaries
@@ -213,6 +242,14 @@ public final class Mapper<N: Mappable> {
 
 		return nil
 	}
+
+    public func failableMapArray(JSON: AnyObject?) -> FailableOf<[N]> {
+        if let JSONArray = JSON as? [[String : AnyObject]] {
+            return failableMapArray(JSONArray)
+        }
+        
+        return FailableOf(["JSON parsing failed"])
+    }
 	
 	/**
 	* Maps an array of JSON dictionary to an array of object that conforms to Mappable
@@ -227,6 +264,18 @@ public final class Mapper<N: Mappable> {
 		}
 	}
 
+    public func failableMapArray(JSONArray: [[String : AnyObject]]) -> FailableOf<[N]> {
+        var returnArray : [N] = []
+        for JSON in JSONArray {
+            let mappingResult : FailableOf<N> = self.failableMap(JSON)
+            if mappingResult.failed {
+                return FailableOf(mappingResult.error!)
+            }
+            returnArray.append(mappingResult.value!)
+        }
+        return FailableOf(returnArray)
+    }
+    
 	/** Maps a JSON object to a dictionary of Mappable objects if it is a JSON
 	* dictionary of dictionaries, or returns nil.
 	*/
